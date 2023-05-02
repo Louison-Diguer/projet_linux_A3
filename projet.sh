@@ -14,6 +14,7 @@ apt-get install swaks
 if [ ! -d /home/shared ]; then
     mkdir /home/shared
 fi
+ssh ldiguer25@10.30.48.100
 # On donne les bons droits et on change le propriétaire du dossier shared
 chmod 755 /home/shared
 chown root /home/shared
