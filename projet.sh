@@ -54,6 +54,7 @@ ssh $user_distant@10.30.48.100 "chmod 006 /home/saves"
 # Création du script retablir la sauvegarde
 cat > /home/retablir_sauvegarde.sh << EOF
 #!/bin/bash
+
 cd /home/\$USER/a_sauver
 tar xzf /home/saves/save_\$USER.tgz
 EOF
@@ -87,6 +88,7 @@ EOF
 # Ajout de la ligne dans la crontab pour effectuer la sauvegarde quotidienne
 $(echo "0 23 * * 1-5 /home/sauvegarde_quotidienne.sh" | crontab)
 
+
 #################################################################################################################################################################
 #########################################################   BOUCLE PRINCIPALE DE LECTURE DE FICHIER   ###########################################################
 #################################################################################################################################################################
@@ -97,18 +99,12 @@ while read line; do
 	surname=$(echo "$line" | cut -d';' -f2)
 	mail=$(echo "$line" | cut -d';' -f3)
 	psswd=$(echo "$line" | cut -d';' -f4)
-	echo -e "$name - $surname - $mail - $psswd"
 	
 	# On créé le nom du compte avec la première lettre du prénom et le nom
 	login="${name:0:1}$surname"
 	
 	# On supprime les espaces dans le login
 	login=$(echo "$login" | sed 's/ //g')
-	echo -e "nom du compte : $login"
-	
-	# Suppression des comptes
-	userdel $login
-	rm -Rf /home/$login
 	
 	# Création du compte de l'utilisateur
 	useradd -m $login
@@ -144,9 +140,7 @@ while read line; do
 	mkdir /home/shared/$login
 	chown $login /home/shared/$login
 	chmod 205 /home/shared/$login
-	
-	echo -e
-	echo -e
+
 done<$1
 
 #################################################################################################################################################################
@@ -212,3 +206,52 @@ ssh $user_distant@10.30.48.100 "CREATE USER nextcloud_admin WITH PASSWORD 'N3x+_
 ssh $user_distant@10.30.48.100 "ALTER DATABASE nextcloud OWNER TO nextcloud_admin ;"
 ssh $user_distant@10.30.48.100 "nextcloud A nextcloud_admin ;"
 ssh $user_distant@10.30.48.100 "exit"
+
+#################################################################################################################################################################
+####################################################################   MONITORING   #############################################################################
+#################################################################################################################################################################
+
+# Création du script pour le monitoring chaque minute
+cat > /home/monitoring_minute.sh << EOF
+#!/bin/bash
+
+# Création du fichier du monitoring chaque minute
+date_file=$(date +%Y%m%d)
+time_file=$(date +%H%M%S)
+
+ssh $user_distant@10.30.48.100 "mkdir /home/monitoring_${date_file}"
+ssh $user_distant@10.30.48.100 "touch /home/monitoring_${date_file}/monitoring_${date_file}_${time_file}.txt"
+
+# CPU
+ssh $user_distant@10.30.48.100 "sar -u 1 1 > /home/monitoring_${date_file}/monitoring_${date_file}_${time_file}.txt"
+# Mémoire
+ssh $user_distant@10.30.48.100 "sar -r 1 1 >> /home/monitoring_${date_file}/monitoring_${date_file}_${time_file}.txt"
+# Réseaux
+ssh $user_distant@10.30.48.100 "vnstat -d >> /home/monitoring_${date_file}/monitoring_${date_file}_${time_file}.txt"
+EOF
+
+commande="bash $user_distant@10.30.48.100:/home/monitoring_minute.sh"
+# Ajout de la ligne dans la crontab pour effectuer le monitoring toutes les minutes
+$(echo "* * * * 1-5 commande" | crontab)
+
+
+# Création du script pour le rapport de monitoring
+ssh $user_distant@10.30.48.100 "mkdir /home/rapport_monitoring"
+
+cat > /home/monitoring_rapport.sh << EOF
+#!/bin/bash
+
+# Création du fichier du rapport de monitoring
+date_file=$(date +%Y%m%d)
+
+ssh $user_distant@10.30.48.100 "touch /home/rapport_monitoring/rapport_monitoring_${date_file}.txt"
+
+for i in $(ls /home/monitoring_${date_file})
+do
+ssh $user_distant@10.30.48.100 "/home/monitoring_${date_file}/$i >> /home/rapport_monitoring/rapport_monitoring_${date_file}.txt"
+done
+EOF
+
+commande="bash $user_distant@10.30.48.100:/home/monitoring_rapport.sh"
+# Ajout de la ligne dans la crontab pour effectuer le monitoring toutes les minutes
+$(echo "* * * * 1-5 commande" | crontab)
