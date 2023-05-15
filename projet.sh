@@ -3,9 +3,26 @@
 clear
 if [ $# -ne 1 ]
 then
-	echo "ERREUR : $0 fichier.csv"
+	echo "ERREUR : sudo bash $0 fichier.csv"
 	exit 1
 fi
+
+#################################################################################################################################################################
+###############################################################  VARIABLES UTILISATEUR  #########################################################################
+#################################################################################################################################################################
+
+echo "Quel est votre nom d'utilisateur sur la machine distante ? : "
+read user_distant
+
+echo "Quel est le nom de votre serveur SMTP ? : "
+read smtp_serv
+
+echo "Quel est votre adresse mail ? : "
+read user_mail
+
+echo "Quel est le mdp de votre mail? : "
+read user_mdp
+
 
 #Installation de swaks pour l'envoi de mail
 apt-get install swaks
@@ -26,8 +43,8 @@ chmod 755 /home/shared
 chown root /home/shared
 
 # Création du dossier saves et permissions dans la machine distante
-ssh ldigue25@10.30.48.100 "mkdir /home/saves"
-ssh ldigue25@10.30.48.100 "chmod 006 /home/saves"
+ssh $user_distant@10.30.48.100 "mkdir /home/saves"
+ssh $user_distant@10.30.48.100 "chmod 006 /home/saves"
 
 #################################################################################################################################################################
 ###############################################################   ECRITURE DES AUTRES FICHIERS BASH   ###########################################################
@@ -60,7 +77,7 @@ do
 		# Compression du dossier a_sauver
 		tar czf /tmp/\$FILENAME /home/\$USER/a_sauver
 		# Envoi du fichier compressé sur la machine distante
-		scp /tmp/\$FILENAME ldigue25@m10.30.48.100:/home/saves/\$FILENAME
+		scp /tmp/\$FILENAME $user_distant@m10.30.48.100:/home/saves/\$FILENAME
 		# Suppression du fichier compressé local
 		rm /tmp/\$FILENAME
   	fi
@@ -105,14 +122,14 @@ while read line; do
 	chage -d0 $login
 	
 	# Envoi d'un mail login, mdp, expiration
-	#swaks -t $mail \
-	#-s smtp.sfr.fr:587 \
-	#-tls \
-	#-au diguer.louison@sfr.fr \
-	#-ap 395903 \
-	#-f diguer.louison@sfr.fr \
-	#--body "Bonjour,\n\nVos identifiants sont les suivants :\nLogin : $login\nPassword : $psswd\n\nIl vous sera demande de changer votre mot de passe à votre prochaine connexion.\n\nCordialement,\n\nDIGUER Louison et LOBEL Martin" \
-	#--h-Subject "Création de votre compte"
+	swaks -t $mail \
+	-s $smtp_serv \
+	-tls \
+	-au $user_mail \
+	-ap $user_mdp \
+	-f $user_mail \
+	--body "Bonjour,\n\nVos identifiants sont les suivants :\nLogin : $login\nPassword : $psswd\n\nIl vous sera demande de changer votre mot de passe à votre prochaine connexion.\n\nCordialement,\n\nDIGUER Louison et LOBEL Martin" \
+	--h-Subject "Création de votre compte"
 	
 	# On change le propriétaire et on donne tous les droits à l'utilisateur
 	chown $login /home/$login
@@ -171,27 +188,27 @@ sudo iptables -A OUTPUT -p udp -j DROP
 #################################################################################################################################################################
 
 # Installation de Nginx, PostgreSQL, PHP et d’autres packages
-ssh ldigue25@10.30.48.100 "apt install imagemagick php-imagick php7.4-common php7.4-pgsql php7.4-fpm php7.4-gd php7.4-curl php7.4-imagick php7.4-zip php7.4-xml php7.4-mbstring php7.4-bz2 php7.4-intl php7.4-bcmath php7.4-gmp nginx unzip wget"
-ssh ldigue25@10.30.48.100 "apt install -y postgresql postgresql-contrib"
+ssh $user_distant@10.30.48.100 "apt install imagemagick php-imagick php7.4-common php7.4-pgsql php7.4-fpm php7.4-gd php7.4-curl php7.4-imagick php7.4-zip php7.4-xml php7.4-mbstring php7.4-bz2 php7.4-intl php7.4-bcmath php7.4-gmp nginx unzip wget"
+ssh $user_distant@10.30.48.100 "apt install -y postgresql postgresql-contrib"
 
 # Installation de NextCloud
-ssh ldigue25@10.30.48.100 "wget https://download.nextcloud.com/server/releases/latest.zip"
+ssh $user_distant@10.30.48.100 "wget https://download.nextcloud.com/server/releases/latest.zip"
 
 # Décompression du zip
-ssh ldigue25@10.30.48.100 "unzip latest.zip"
+ssh $user_distant@10.30.48.100 "unzip latest.zip"
 
 # On déplace le répertoire extrait vers la racine Web Apache
-ssh ldigue25@10.30.48.100 "mv nextcloud /var/www/"
+ssh $user_distant@10.30.48.100 "mv nextcloud /var/www/"
 
 # On donne les autorisations appropriées au répertoire nextcloud
-ssh ldigue25@10.30.48.100 "chown -R www-data:www-data /var/www/nextcloud/ chmod -R 755 /var/www/nextcloud/"
+ssh $user_distant@10.30.48.100 "chown -R www-data:www-data /var/www/nextcloud/ chmod -R 755 /var/www/nextcloud/"
 
 # Connexion a PostgreSQL
-ssh ldigue25@10.30.48.100 "sudo -u postgres psql"
+ssh $user_distant@10.30.48.100 "sudo -u postgres psql"
 
 # Création de la base de données
-ssh ldigue25@10.30.48.100 "CREATE DATABASE nextcloud TEMPLATE template0 ENCODING 'UNICODE' ;"
-ssh ldigue25@10.30.48.100 "CREATE USER nextcloud_admin WITH PASSWORD 'N3x+_Cl0uD' ;"
-ssh ldigue25@10.30.48.100 "ALTER DATABASE nextcloud OWNER TO nextcloud_admin ;"
-ssh ldigue25@10.30.48.100 "nextcloud A nextcloud_admin ;"
-ssh ldigue25@10.30.48.100 "exit"
+ssh $user_distant@10.30.48.100 "CREATE DATABASE nextcloud TEMPLATE template0 ENCODING 'UNICODE' ;"
+ssh $user_distant@10.30.48.100 "CREATE USER nextcloud_admin WITH PASSWORD 'N3x+_Cl0uD' ;"
+ssh $user_distant@10.30.48.100 "ALTER DATABASE nextcloud OWNER TO nextcloud_admin ;"
+ssh $user_distant@10.30.48.100 "nextcloud A nextcloud_admin ;"
+ssh $user_distant@10.30.48.100 "exit"
