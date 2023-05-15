@@ -215,7 +215,6 @@ ssh $user_distant@10.30.48.100 "exit"
 cat > /home/monitoring_minute.sh << EOF
 #!/bin/bash
 
-# Création du fichier du monitoring chaque minute
 date_file=$(date +%Y%m%d)
 time_file=$(date +%H%M%S)
 
