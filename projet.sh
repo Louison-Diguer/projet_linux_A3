@@ -10,6 +10,12 @@ fi
 #Installation de swaks pour l'envoi de mail
 apt-get install swaks
 
+
+#################################################################################################################################################################
+###############################################################   CREATION ARBORESCENCE  ########################################################################
+#################################################################################################################################################################
+
+
 # Création du dossier shared s'il n'existe pas
 if [ ! -d /home/shared ]; then
     mkdir /home/shared
@@ -20,8 +26,13 @@ chmod 755 /home/shared
 chown root /home/shared
 
 # Création du dossier saves et permissions dans la machine distante
-sudo -u isen ssh ldigue25@10.30.48.100 "mkdir /home/saves"
-sudo -u isen ssh ldigue25@10.30.48.100 "chmod 006 /home/saves"
+ssh ldigue25@10.30.48.100 "mkdir /home/saves"
+ssh ldigue25@10.30.48.100 "chmod 006 /home/saves"
+
+#################################################################################################################################################################
+###############################################################   ECRITURE DES AUTRES FICHIERS BASH   ###########################################################
+#################################################################################################################################################################
+
 
 # Création du script retablir la sauvegarde
 cat > /home/retablir_sauvegarde.sh << EOF
@@ -59,7 +70,10 @@ EOF
 # Ajout de la ligne dans la crontab pour effectuer la sauvegarde quotidienne
 $(echo "0 23 * * 1-5 /home/sauvegarde_quotidienne.sh" | crontab)
 
-# Boucle de lecture du fichier
+#################################################################################################################################################################
+#########################################################   BOUCLE PRINCIPALE DE LECTURE DE FICHIER   ###########################################################
+#################################################################################################################################################################
+
 while read line; do
 	# Lecture du fichier
 	name=$(echo "$line" | cut -d';' -f1)
@@ -118,6 +132,10 @@ while read line; do
 	echo -e
 done<$1
 
+#################################################################################################################################################################
+###############################################################   TELECHARGEMENT ECLIPSE   ######################################################################
+#################################################################################################################################################################
+
 # Installation de Eclipse
 URL_dl_eclipse="https://rhlx01.hs-esslingen.de/pub/Mirrors/eclipse/oomph/epp/2023-03/R/eclipse-inst-jre-linux64.tar.gz"
 comp_eclipse="eclipse.tar.gz"
@@ -135,12 +153,45 @@ chmod -R 755 "$share_eclipse"
 # Création d'un lien symbolique dans le home pour que Eclipse soit disponible pour tous
 ln -s "$share_eclipse/eclipse" /home/eclipse
 
-# Pare-feux
+#################################################################################################################################################################
+######################################################################   PARE-FEUX   ############################################################################
+#################################################################################################################################################################
+
 # Création de l'iptables
-iptables -N RULES
+iptables -N RULES	
 
 # Blocage des connexions  FTP
 sudo iptables -A OUTPUT -p tcp --dport 21 -j DROP
 
 # Blocage des connexions UDP
 sudo iptables -A OUTPUT -p udp -j DROP
+
+#################################################################################################################################################################
+###############################################################   TELECHARGEMENT NEXTCLOUD   ####################################################################
+#################################################################################################################################################################
+
+# Installation de Nginx, PostgreSQL, PHP et d’autres packages
+ssh ldigue25@10.30.48.100 "apt install imagemagick php-imagick php7.4-common php7.4-pgsql php7.4-fpm php7.4-gd php7.4-curl php7.4-imagick php7.4-zip php7.4-xml php7.4-mbstring php7.4-bz2 php7.4-intl php7.4-bcmath php7.4-gmp nginx unzip wget"
+ssh ldigue25@10.30.48.100 "apt install -y postgresql postgresql-contrib"
+
+# Installation de NextCloud
+ssh ldigue25@10.30.48.100 "wget https://download.nextcloud.com/server/releases/latest.zip"
+
+# Décompression du zip
+ssh ldigue25@10.30.48.100 "unzip latest.zip"
+
+# On déplace le répertoire extrait vers la racine Web Apache
+ssh ldigue25@10.30.48.100 "mv nextcloud /var/www/"
+
+# On donne les autorisations appropriées au répertoire nextcloud
+ssh ldigue25@10.30.48.100 "chown -R www-data:www-data /var/www/nextcloud/ chmod -R 755 /var/www/nextcloud/"
+
+# Connexion a PostgreSQL
+ssh ldigue25@10.30.48.100 "sudo -u postgres psql"
+
+# Création de la base de données
+ssh ldigue25@10.30.48.100 "CREATE DATABASE nextcloud TEMPLATE template0 ENCODING 'UNICODE' ;"
+ssh ldigue25@10.30.48.100 "CREATE USER nextcloud_admin WITH PASSWORD 'N3x+_Cl0uD' ;"
+ssh ldigue25@10.30.48.100 "ALTER DATABASE nextcloud OWNER TO nextcloud_admin ;"
+ssh ldigue25@10.30.48.100 "nextcloud A nextcloud_admin ;"
+ssh ldigue25@10.30.48.100 "exit"
