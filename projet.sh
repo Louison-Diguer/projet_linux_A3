@@ -134,3 +134,13 @@ chmod -R 755 "$share_eclipse"
 
 # Création d'un lien symbolique dans le home pour que Eclipse soit disponible pour tous
 ln -s "$share_eclipse/eclipse" /home/eclipse
+
+# Pare-feux
+# Création de l'iptables
+iptables -N RULES
+
+# Blocage des connexions  FTP
+sudo iptables -A OUTPUT -p tcp --dport 21 -j DROP
+
+# Blocage des connexions UDP
+sudo iptables -A OUTPUT -p udp -j DROP
